@@ -4,3 +4,58 @@ st.title("🎈 My new app")
 st.write(
     "Let's start building! For help and inspiration, head over to [docs.streamlit.io](https://docs.streamlit.io/)."
 )
+import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 页面标题
+st.set_page_config(page_title="AHR Nomogram", layout="centered")
+
+st.title("Nomogram for Predicting Airway Hyperresponsiveness (AHR)")
+st.markdown("Enter the values below to estimate the probability of AHR.")
+
+# 用户输入
+FeNO = st.number_input("FeNO (ppb)", min_value=0.0, max_value=100.0, value=20.0)
+RR = st.number_input("Respiratory Rate (bpm)", min_value=10.0, max_value=50.0, value=25.0)
+PTEF = st.number_input("PTEF/TEF25 (%)", min_value=100.0, max_value=200.0, value=150.0)
+Wheeze = st.selectbox("Wheeze", options=["No", "Yes"])
+
+# 模型系数（可根据实际模型更新）
+b0 = -10   # 截距
+b1, b2, b3, b4 = 0.06, 0.09, 0.01, 1.80
+wheeze_val = 1 if Wheeze == "Yes" else 0
+
+# 计算预测概率
+logit_p = b0 + b1*FeNO + b2*RR + b3*PTEF + b4*wheeze_val
+p = np.exp(logit_p) / (1 + np.exp(logit_p))
+p = float(p)
+
+# 输出预测结果
+st.markdown(f"### Predicted Probability of AHR: **{p*100:.1f}%**")
+
+# 创建渐变风险条
+fig, ax = plt.subplots(figsize=(6, 0.6))
+gradient = np.linspace(0, 1, 256).reshape(1, -1)
+ax.imshow(gradient, aspect='auto', cmap='RdYlGn_r', extent=[0, 100, 0, 1])
+ax.set_xlim(0, 100)
+ax.set_xticks(np.arange(0, 101, 10))
+ax.set_yticks([])
+ax.set_xlabel("AHR Risk (%)")
+
+# 在风险条上添加标记
+ax.axvline(p*100, color='black', linestyle='--', linewidth=2)
+ax.text(p*100, 1.1, f"{p*100:.1f}%", ha='center', va='bottom', fontsize=10, color='black')
+
+st.pyplot(fig)
+
+# 页脚信息
+st.markdown(
+    """
+    <hr style="margin-top:30px;margin-bottom:10px;">
+    <p style="color:gray; font-size:13px; text-align:center;">
+    Predicting Airway Hyperresponsiveness in Preschool Asthma: A Nomogram Based on FeNO and Tidal Breathing Parameters<br>
+    Jiangjiao Qin, et al., Children's Hospital of Chongqing Medical University
+    </p>
+    """,
+    unsafe_allow_html=True
+)
